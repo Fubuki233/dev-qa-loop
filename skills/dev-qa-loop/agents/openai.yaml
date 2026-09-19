@@ -2,3 +2,6 @@ interface:
   display_name: "开发与测试并行"
   short_description: "主模型开发、Luna 并行编写测试，通过版本快照交接并跟进 CI 结果"
   default_prompt: "使用 $dev-qa-loop 推进当前功能：主模型开发，Luna 并行编写测试，按代码快照验证并跟进 PR 的 CI。"
+
+policy:
+  allow_implicit_invocation: true

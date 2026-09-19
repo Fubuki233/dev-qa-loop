@@ -36,7 +36,18 @@ mkdir -p .agents/skills
 ln -s /absolute/path/to/dev-qa-loop/skills/dev-qa-loop .agents/skills/dev-qa-loop
 ```
 
-调用示例：
+### 自动启用
+
+已启用 `policy.allow_implicit_invocation: true`。安装后可直接提出需要测试的开发需求，
+不必每次输入 `$dev-qa-loop`。例如“实现分页查询接口”或“修复重试导致重复发送”，
+在存在可独立推进的 QA 工作时，Codex 可自动选择本技能，让 Luna 同步编写测试。
+解释问题、仅改文档/样式和简单小改动不启动并行工作线；用户指定的执行方式优先。
+
+自动匹配由 Codex 根据 skill 的 description 判断，并非每条开发消息都会强制启动。
+Codex 会自动检测技能变更；更新未出现时重启 Codex。此机制不提供会话结束后的自动唤醒。
+配置依据：[OpenAI 官方技能文档](https://developers.openai.com/codex/skills/)。
+
+显式调用示例（需要明确指定本技能时使用）：
 
 ```text
 $dev-qa-loop 实现分页查询 API，主模型开发，Luna 同步写测试，按快照验证并跟进 PR CI。

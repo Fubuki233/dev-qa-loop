@@ -1,14 +1,24 @@
 ---
 name: dev-qa-loop
-description: Coordinate feature implementation with a Luna QA subagent, immutable code snapshots, and GitHub Actions feedback. Use when the user wants development and test writing in parallel, or wants to continue that workflow through a PR's CI checks.
+description: Use automatically for nontrivial feature implementation, bug fixes, or behavioral refactors with independently actionable test work, even without an explicit parallel-testing request. Coordinate Luna QA, code snapshots, and PR CI feedback. Skip read-only questions, docs-only or cosmetic edits, and trivial changes.
 ---
 
 # 开发与测试并行
 
 主 Agent 负责功能、契约、复杂故障和最终验收；一个 `gpt-5.6-luna` 子 Agent
 并行设计及编写测试、执行验证和归纳 CI 失败。等待 CI 交给脚本。
-本技能明确请求在存在可独立推进的 QA 工作时使用子 Agent；纯文案、视觉微调或很小的修复
-仍按项目的验证分级执行，不为了并行而制造测试或任务。
+本技能明确请求在存在可独立推进的 QA 工作时使用子 Agent。
+
+## 自动启用范围
+
+- 用户要求实现功能、修复缺陷或调整行为，且需要行为验证、QA 能依据需求独立推进时，
+  自动使用本技能；不要求用户额外提到“并行测试”、Luna 或 `$dev-qa-loop`。
+- 自动选中后，简短告知主 Agent 开发、Luna 负责测试，并继续任务，无需再次确认是否启用。
+  已有这条工作线时恢复原 QA 和交接记录，避免每轮消息重复启动子 Agent。
+- 解释问题、只读审查、仅改文档/文案/样式，以及没有独立 QA 工作的小改动，不启动并行工作线。
+  仍按项目验证分级执行，不为了并行而制造测试或任务。用户要求串行或指定其他方式时遵从用户。
+- CI 跟进限于当前任务已有目标 PR 且包含 CI 跟进的情形；缺少 PR 不阻塞本地并行开发。
+  自动匹配由宿主根据 description 判断；后台跨会话唤醒不属于本技能的自动启用。
 
 ## 启动或恢复
 
