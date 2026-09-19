@@ -1,65 +1,68 @@
-# CI 观察与诊断
+# CI observation and diagnosis
 
-依赖 Python 3.10+、GitHub CLI `gh` 和现有登录。不安装 GitHub App，不发送评论。
-复用 gh 取数据，额外处理固定 head、缺失门禁和状态变化，不要求安装其他技能。
-只支持 GitHub Actions 日志，外部检查保留 URL。
+English | [简体中文](../locales/zh-CN/ci.md) | [日本語](../locales/ja/ci.md)
 
-## 观察指定 PR 版本
+Requires Python 3.10+, GitHub CLI `gh`, and an existing login. No GitHub App installation or comments.
+The helpers reuse gh, adding pinned heads, missing-check handling, and change-only output; no other
+skill is required. Logs are supported for GitHub Actions only; preserve URLs for external checks.
+
+## Watch a specific PR version
 
 ```bash
-gh pr view '<PR号>' --repo '<owner/repo>' --json headRefOid
+gh pr view '<PR-number>' --repo '<owner/repo>' --json headRefOid
 python3 '<skill-dir>/scripts/watch_checks.py' \
-  --repo '<owner/repo>' --pr '<PR号>' --head '<完整SHA>' \
+  --repo '<owner/repo>' --pr '<PR-number>' --head '<full-SHA>' \
   --expect-check quality --expect-check docker-build \
-  --timeout 1800 --interval 30 --output '<任务状态目录>/ci.json'
+  --timeout 1800 --interval 30 --output '<task-state-dir>/ci.json'
 ```
 
-`--expect-check` 可重复；指定时只以这些门禁决定结果，报告仍包含全部检查。
-不指定时检查当前 rollup 全部检查；没有任何检查不能算通过。
-缺失的预期门禁继续等待。跳过/neutral 单独列出，默认需要审查；
-确认允许跳过时才加 `--allow-skipped '<检查名>'`。同名多项检查都必须满足要求。
-交付前核对分支保护和项目实际门禁，脚本不自行配置或推测必需检查。
+Repeat `--expect-check` to name gates. When specified, only those gates determine the result, but the
+report includes all checks. Without it, evaluate the current rollup; no checks never means success.
+Wait for missing expected checks. Skipped/neutral checks require review by default; add
+`--allow-skipped '<check-name>'` only when that skip is accepted. Every same-named check must qualify.
+Verify branch protection and actual project gates before delivery; the script does not configure or infer them.
 
-每次查询在同一 PR 响应读取 head 和 rollup，head 变化返回 superseded。
-不把 PR 测试 merge SHA 强行等同于 head SHA；诊断报告保留 run 的实际 SHA。
-脚本没有调用模型的逻辑，只在状态变化和退出时输出 JSON 行。
+Each query reads head and rollup from the same PR response; a changed head returns `superseded`.
+Do not equate the PR test merge SHA with its head SHA; diagnostic reports retain the actual run SHA.
+Scripts do not call models and emit JSON lines only on state changes and exit.
 
-使用宿主支持的后台进程并保存句柄；单次工具等待不超过 60 秒，其间继续独立工作。
-不要通过模型频繁调用 gh。`--once` 做一次查询；`--timeout` 是观察截止时间，
-每个 gh 调用也受剩余时间和 30 秒上限约束。
+Use host-supported background processes and retain their handles. Wait at most 60 seconds per tool
+call and continue independent work. Avoid frequent model-driven gh polling. `--once` queries once;
+`--timeout` bounds observation, and each gh request is capped by the remaining time and 30 seconds.
 
-| 退出码 | 含义 |
+| Exit | Meaning |
 | --- | --- |
-| 0 | 所选门禁通过，注明显式允许的跳过项 |
-| 1 | 所选门禁失败 |
-| 2 | 参数、认证、网络或数据错误 |
-| 3 | 等待超时，不能视为通过 |
-| 4 | PR head 更新，证据已过期 |
-| 5 | 所选检查被取消 |
-| 6 | PR 已关闭/合并，结束观察但不证明通过 |
-| 7 | 跳过、neutral 或未知状态，需要审查 |
-| 8 | --once 时仍在运行或缺少门禁 |
+| 0 | Selected gates passed; disclose explicitly allowed skips |
+| 1 | Selected gates failed |
+| 2 | Argument, authentication, network, or data error |
+| 3 | Timeout; not success |
+| 4 | PR head changed; evidence is stale |
+| 5 | Selected checks cancelled |
+| 6 | PR closed/merged; observation ended without proving CI success |
+| 7 | Skipped, neutral, or unknown status needs review |
+| 8 | `--once` found pending or missing checks |
 
-## 提取失败
+## Collect failures
 
-从 watcher 失败检查 URL 取得 GitHub Actions run ID，检查 URL 仓库。
-不要取分支“最近一次运行”，它可能属于别的提交。默认只取元数据：
+Take the GitHub Actions run ID from the failed check URL, verifying its repository. Do not select the
+branch's latest run: it may belong to another commit. By default, collect metadata only:
 
 ```bash
 python3 '<skill-dir>/scripts/collect_failures.py' \
   --repo '<owner/repo>' --run '<run-id>' \
-  --output '<任务状态目录>/run-<run-id>.json'
+  --output '<task-state-dir>/run-<run-id>.json'
 ```
 
-报告保留 run ID、实际 head SHA、event、branch、attempt、结论、失败 job/step 和 URL。
-用 PR 检查链接关联该 run；若 SHA 是合并测试提交，核验运行的 PR 关联。
-重新修复前再核对 PR head 仍是观察目标。
+Reports retain run ID, actual head SHA, event, branch, attempt, conclusion, failed jobs/steps, and URL.
+Associate the run through the PR check link; for a test merge SHA, verify the run's PR association.
+Before another repair, confirm the PR head still matches the observed version.
 
-需要失败日志时追加 `--log-output '<本地日志路径>'`。脚本固定 attempt，
-保存权限 0600 的本地文件，**不打印日志到 stdout**；限量保留，截断会标注。
-日志可能仍含 Secret/个人数据：不要提交、上传或原样发给主模型，只回传必要且脱敏的摘要。
-日志拉取失败单独报告，不能因此标记通过。脚本不下载制品、不重跑任务。
-采集脚本退出码 0 只表示采集成功，CI 结论必须读取报告的 `conclusion`。
+Add `--log-output '<local-log-path>'` if failure logs are needed. The script pins the attempt, writes
+a bounded local file with mode 0600, marks truncation, and **does not print logs to stdout**.
+Logs may contain secrets/personal data; do not commit, upload, or forward them verbatim to the main
+agent. Return only necessary sanitized summaries. Report log-download failures separately; never
+convert them into success. The script neither downloads artifacts nor reruns workflows.
+Collector exit code 0 means collection succeeded, not CI success; read the report's `conclusion`.
 
-CI 证据不替代本地验收。此版本观察 PR checks；部署跟进用项目已有运维技能。
-跨会话唤醒需要外部宿主，本技能不安装调度服务。
+CI evidence does not replace local acceptance. This version observes PR checks; use the project's
+existing operations workflow for deployment. Cross-session wake-up requires an external host scheduler.

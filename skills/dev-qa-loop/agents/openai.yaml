@@ -1,7 +1,7 @@
 interface:
-  display_name: "开发与测试并行"
-  short_description: "主模型开发、Luna 并行编写测试，通过版本快照交接并跟进 CI 结果"
-  default_prompt: "使用 $dev-qa-loop 推进当前功能：主模型开发，Luna 并行编写测试，按代码快照验证并跟进 PR 的 CI。"
+  display_name: "Parallel Development and QA"
+  short_description: "Parallel tests, task-aware QA model selection, and CI feedback"
+  default_prompt: "Use $dev-qa-loop to implement this feature, choose a suitable QA model, write tests in parallel, validate snapshots, and track PR CI."
 
 policy:
   allow_implicit_invocation: true
