@@ -21,7 +21,11 @@ Only the main agent maintains `state.json`, writing a temporary file and replaci
   "qa_model_requested": "<selected-model-id; null when inheriting>",
   "qa_model_actual": null,
   "qa_reasoning_effort": null,
-  "qa_model_reason": "<task, capability, latency, and budget rationale>",
+  "qa_cost_basis": null,
+  "qa_escalation_reason": null,
+  "qa_upgrade_count": 0,
+  "qa_upgrade_limit": 1,
+  "qa_model_reason": "<subtask, cheaper alternative, and capability rationale>",
   "language": "en",
   "main_worktree": "<absolute-path>",
   "qa_worktree": "<another-absolute-path>",
@@ -68,7 +72,17 @@ Mark missing implementation as waiting_implementation; report completed tests an
 Write results to your own <report path>, send a brief summary, and do not modify coordination state.json.
 ```
 
-Choose a host-supported model and reasoning effort for the task; user choices and budgets take precedence.
+Choose the lowest-cost capable host-supported model and lowest sufficient effort; user choices and
+budgets take precedence. Record `qa_model_reason` with the subtask and cheaper candidate considered,
+`qa_cost_basis` with host/user cost evidence (or unknown), and `qa_escalation_reason` with a capability
+gap for any stronger initial choice or upgrade. Set it to null when no escalation is needed. Record the
+cheaper candidate's limitation, not just "better quality". `qa_upgrade_count` includes model/effort upgrades
+across agent replacements; do not reset it or repair rounds on replacement. `qa_upgrade_limit` defaults
+to 1; after that the main agent handles or narrows the hard part. Stronger initial choices still require
+evidence. An explicitly requested user model takes precedence and is recorded as the reason.
+Do not upgrade for product bugs, red CI, missing implementation, or environment/auth failures.
+Prices can remain unknown; economical/lightweight host labels are heuristics, not verified prices.
+These records guide decisions; the scripts do not enforce model choices or monetary limits.
 Set native dispatch parameters, for example `task_name="qa"`, `model="<selected-model-id>"`,
 `reasoning_effort="<supported-effort>"`, `fork_turns="none"`, omitting fields the host does not support.
 Use null for `qa_model_requested` when inheriting the default, `qa_model_actual` when the host does not

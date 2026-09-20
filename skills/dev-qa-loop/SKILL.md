@@ -1,6 +1,6 @@
 ---
 name: dev-qa-loop
-description: Use automatically for nontrivial feature implementation, bug fixes, or behavioral refactors with independently actionable test work, even without an explicit parallel-testing request. Coordinate a QA subagent, code snapshots, and PR CI feedback; select its model to fit the task. Skip read-only questions, docs-only or cosmetic edits, and trivial changes.
+description: Use automatically for nontrivial feature implementation, bug fixes, or behavioral refactors with independently actionable test work, even without an explicit parallel-testing request. Coordinate a QA subagent, code snapshots, and PR CI feedback; prefer the lowest-cost capable model and require evidence for upgrades. Skip read-only questions, docs-only or cosmetic edits, and trivial changes.
 ---
 
 # Parallel development and QA
@@ -45,17 +45,35 @@ status values, model IDs, and code identifiers unchanged. Reports and handoff pr
 
 ## Select a model and keep developing
 
-- Default to one QA subagent. The main agent selects its model and supported reasoning effort from the
-  host's available options, considering test complexity, required capabilities, latency, and known cost/budget.
-  Routine cases and CI summaries can use a lighter model; complex integration, concurrency, or security
-  behavior may need stronger reasoning. Do not invent model availability, capabilities, or prices.
+- Default to one QA subagent using the lowest-cost available model known to meet the QA subtask's
+  requirements, with the lowest sufficient supported reasoning effort. Routine test cases, fixtures,
+  regression tests, and CI summaries start with an economical model. Keep acceptance criteria intact;
+  the main agent handles difficult product reasoning. Do not select the strongest model or maximum
+  effort just for reassurance, or infer QA complexity from the whole project's size.
+- Use current host-provided cost information or a user-provided ordering. When prices are unavailable,
+  use an explicitly described economical/lightweight option as a heuristic and record cost as unknown;
+  do not claim it is cheapest. If no cost/tier information exists, record that limitation and select for
+  the narrow subtask without defaulting to the strongest model. Never invent availability, prices, or savings.
+- A stronger initial model or later upgrade needs a concrete capability gap and why a cheaper candidate
+  cannot cover it. A known limitation affecting a specific high-consequence acceptance case can justify
+  starting stronger. Otherwise, upgrade only after demonstrated reasoning failures persist after a focused
+  clarification and a valid test harness. Product bugs, red CI, missing implementation, environment/auth
+  errors, and vague "complex/security task" labels alone are not upgrade evidence.
+- Upgrade only as far as that gap requires, within existing constraints; record the cheaper alternative,
+  cost basis, evidence, and decision before dispatch. Allow at most one automatic cost/capability upgrade
+  (model or reasoning effort) per QA assignment, counted across agent replacements. After that, the main
+  agent handles or narrows the difficult part instead of repeatedly buying stronger workers. Upgrades do
+  not reset repair rounds. Do not launch competing models to compare answers for routine QA.
 - Honor an explicit user model or budget constraint. If unavailable, report the limitation and continue
   independent work; do not silently substitute against that constraint. For an autonomous choice that is
-  unavailable, select another suitable available option and report the change without unnecessary confirmation.
+  unavailable, apply the same cost-first rule to alternatives and report the change. A stronger replacement
+  still needs upgrade evidence. Resolve conflicts between user model and budget constraints before dispatch.
 - Set the chosen model in the actual dispatch parameters when supported. Use isolated context
   (`fork_turns="none"` when available) and a self-contained handoff. If selection is unsupported, inherit
-  the host default and say so. Record requested and host-reported model separately; an unreported actual
-  model remains unknown. A model name in a prompt does not configure a model.
+  the host default only if consistent with user constraints, and disclose that cost selection is unavailable.
+  Record requested and host-reported model separately; an unreported actual model remains unknown.
+  A model name in a prompt does not configure a model. This policy guides selection; hard monetary caps
+  require host-side usage accounting/enforcement and cannot be guaranteed by a skill alone.
 - The main agent dispatches QA; QA does not spawn more agents. Reuse QA for later snapshots. If a model
   change requires a replacement, checkpoint its work, stop concurrent ownership, and transfer the assignment
   before starting the replacement. Never run two writers in the same QA worktree.

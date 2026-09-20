@@ -21,7 +21,11 @@ Git common dir に対応する共有リポジトリに `.agents/dev-qa-loop/<tas
   "qa_model_requested": "<selected-model-id; null when inheriting>",
   "qa_model_actual": null,
   "qa_reasoning_effort": null,
-  "qa_model_reason": "<task, capability, latency, and budget rationale>",
+  "qa_cost_basis": null,
+  "qa_escalation_reason": null,
+  "qa_upgrade_count": 0,
+  "qa_upgrade_limit": 1,
+  "qa_model_reason": "<subtask, cheaper alternative, and capability rationale>",
   "language": "en",
   "main_worktree": "<absolute-path>",
   "qa_worktree": "<another-absolute-path>",
@@ -67,7 +71,14 @@ QA だけが `qa-state.json` を管理し、`applied_snapshot_id`、`applied_sna
 自分専用の <報告パス> に結果を書き、短い要約を返してください。調整用 state.json は変更しません。
 ```
 
-メイン Agent がホスト対応のモデルと推論強度を選び、ユーザー指定と予算を優先します。派発ツールの実際のパラメーターで
+ホスト対応で個別タスクを遂行できる最も低コストなモデルと十分な最低限の推論強度を優先し、ユーザー指定と予算を守ります。
+`qa_model_reason` に個別タスクと検討した安い候補を、`qa_cost_basis` にホスト・ユーザー由来の費用の根拠、または不明と記録します。
+最初から強いモデルを使う場合や昇格時は、`qa_escalation_reason` に能力不足と安い候補の制限を記録し、「品質が良い」だけを理由にしません。
+昇格が不要なら null にします。`qa_upgrade_count` はモデル・推論強度の引き上げ回数を Agent 交代後も累積し、修正回数もリセットしません。
+`qa_upgrade_limit` の既定値は 1 です。その後はメイン Agent が難所を担当するか範囲を絞ります。初期の強いモデルにも証拠が必要です。
+ユーザーの明示的なモデル指定は優先し、その指定を理由として記録します。製品の不具合、CI 失敗、未実装、環境・認証障害は昇格の根拠になりません。
+価格は不明でも構いません。経済的・軽量という表示は目安であり、検証済みの価格ではありません。
+これらは判断用の記録です。スクリプト自体はモデル選択や金額の上限を強制しません。派発ツールの実際のパラメーターで
 `task_name="qa"`、`model="<selected-model-id>"`、`reasoning_effort="<supported-effort>"`、
 `fork_turns="none"` などを指定し、非対応フィールドは省略します。既定モデルを継承する場合は `qa_model_requested` を null、
 実モデルが報告されない場合は `qa_model_actual` を null、推論強度が未指定なら `qa_reasoning_effort` を null にします。

@@ -21,7 +21,11 @@
   "qa_model_requested": "<所选模型ID；继承默认时为null>",
   "qa_model_actual": null,
   "qa_reasoning_effort": null,
-  "qa_model_reason": "<基于任务、能力、延迟和预算的选择理由>",
+  "qa_cost_basis": null,
+  "qa_escalation_reason": null,
+  "qa_upgrade_count": 0,
+  "qa_upgrade_limit": 1,
+  "qa_model_reason": "<具体子任务、较便宜备选及能力依据>",
   "language": "en",
   "main_worktree": "<绝对路径>",
   "qa_worktree": "<另一个绝对路径>",
@@ -66,7 +70,13 @@ QA 单独维护 `qa-state.json`，记录 `applied_snapshot_id`、`applied_snapsh
 结果写到你独占的 <报告路径>，回传精简摘要；不要修改协调 state.json。
 ```
 
-主 Agent 根据任务自主选择宿主支持的模型和推理强度，用户指定及预算约束优先。
+优先选择宿主支持、能胜任子任务的最低成本模型和足够的最低推理强度，用户指定及预算约束优先。
+`qa_model_reason` 记录具体子任务和考虑过的较便宜候选；`qa_cost_basis` 记录宿主/用户成本依据，没有则记未知。
+初始选择更强模型或升级时，在 `qa_escalation_reason` 记录能力缺口及较便宜候选的局限，不能只写“质量更好”；无需升级时为 null。
+`qa_upgrade_count` 累计模型/推理强度升级次数，替换 Agent 不重置它或修复轮次。`qa_upgrade_limit` 默认 1，
+之后由主 Agent 接手或缩小困难部分。初始直接选强模型仍需证据；用户明确指定的模型优先，并把该要求记为理由。
+产品缺陷、CI 红灯、未实现、环境/认证故障不是升级依据。价格可记未知；经济型/轻量标签是启发信息，不是已验证价格。
+这些记录约束决策；脚本不负责强制执行选模或金额限制。
 使用原生派发工具的实际参数，例如 `task_name="qa"`、`model="<所选模型ID>"`、
 `reasoning_effort="<宿主支持的强度>"`、`fork_turns="none"`，按宿主能力省略不支持的字段。
 继承宿主默认时 `qa_model_requested` 记为 null；宿主不公开实际模型时 `qa_model_actual` 保持 null。

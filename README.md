@@ -3,7 +3,7 @@
 English (default) | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
 
 A Codex skill for parallel implementation and test development, immutable code handoffs,
-and GitHub Actions feedback. The main agent selects a suitable QA model for each task;
+and GitHub Actions feedback. The main agent selects the lowest-cost capable QA model for each task;
 no particular model is required.
 
 Skill entrypoint: [skills/dev-qa-loop/SKILL.md](skills/dev-qa-loop/SKILL.md).
@@ -50,10 +50,19 @@ provide cross-session wake-up. See [official skill documentation](https://develo
 
 ### Model selection and language
 
-The main agent chooses among host-supported QA models and reasoning settings based on task complexity,
-required capabilities, latency, and known cost/budget. Explicit user model and budget constraints take
-precedence. If selection is unsupported, QA inherits the host default and reports that limitation.
-The handoff records the requested model separately from any model actually reported by the host.
+Start with the lowest-cost available model known to meet the QA subtask's requirements and the lowest
+sufficient reasoning effort. Routine tests and CI summaries use economical models. A stronger initial
+choice or later upgrade needs a concrete capability gap and an explanation of why a cheaper candidate
+cannot meet it; red CI, product bugs, or vague complexity labels are not enough. Default to at most one
+automatic model/effort upgrade per QA assignment, then let the main agent handle or narrow the hard part.
+Do not reset that count when replacing QA, or launch competing models for routine work.
+
+Use host-provided costs or a user-provided ranking. If only an economical/lightweight label is known,
+use it as a heuristic and report prices as unknown; do not invent prices or claim savings. Explicit user
+model and budget constraints take precedence. The handoff records the cheaper alternative, selection
+rationale, escalation evidence, and requested versus host-reported model. When selection is unsupported,
+inherit the host default only if it fits user constraints, and disclose the limitation.
+This is a selection policy, not a billing cap: hard spending limits require host-side accounting/enforcement.
 
 English is the default for documentation and UI metadata. Reports follow an explicit language request,
 then the conversation language (English, Chinese, or Japanese), with English as the fallback. Commands,
@@ -62,7 +71,7 @@ JSON fields, and status values stay stable across languages; the CLI's machine-r
 Explicit invocation:
 
 ```text
-$dev-qa-loop Implement a paginated API; choose a suitable QA model, write tests in parallel, and track PR CI.
+$dev-qa-loop Implement a paginated API; choose the lowest-cost capable QA model, write tests in parallel, and track PR CI.
 ```
 
 Without commit authorization, use patch handoffs. Without a PR, complete local validation and report
